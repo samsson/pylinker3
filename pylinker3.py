@@ -453,7 +453,7 @@ def parse_lnk(filename, editcommandline):
 			write_custom_commandline(file_part_1, file_part_2, hide)
 		else:
 			addnl_text,next_loc = add_info(f,next_loc)
-			output += "Command Line: "+str(addnl_text.decode('utf-16le', errors='ignore')) + "\n"
+			output += "Command Line: "+str(addnl_text.decode('utf-16le', errors='ignore').lstrip(" ")) + "\n"
 			
 	if flags[6]=="1":
 		 addnl_text,next_loc = add_info(f,next_loc)
