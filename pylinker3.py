@@ -56,7 +56,7 @@ flag_hash[29][1] = "Unused"
 flag_hash[30][1] = "Unused"
 
 # HASH of FileAttributes
-file_hash = [["",""] for _ in range(15)]
+file_hash = [["", ""] for _ in range(15)]
 file_hash[0][1] = "FILE_ATTRIBUTE_READONLY"
 file_hash[1][1] = "FILE_ATTRIBUTE_HIDDEN"
 file_hash[2][1] = "FILE_ATTRIBUTE_SYSTEM"
@@ -73,7 +73,7 @@ file_hash[12][1] = "FILE_ATTRIBUTE_OFFLINE"
 file_hash[13][1] = "FILE_ATTRIBUTE_NOT_CONTENT_INDEXED"
 file_hash[14][1] = "FILE_ATTRIBUTE_ENCRYPTED"
 
-#Hash of ShowWnd values
+# Hash of ShowWnd values
 show_wnd_hash = [[""] for _ in range(11)]
 show_wnd_hash[0] = "SW_HIDE"
 show_wnd_hash[1] = "SW_NORMAL"
@@ -97,34 +97,38 @@ vol_type_hash[4] = "Remote (Network Drive)"
 vol_type_hash[5] = "CD-ROM"
 vol_type_hash[6] = "RAM Drive"
 
-def write_custom_commandline(file_part_1, file_part_2, hide):
-		
+def write_custom_commandline(file_part_1, file_part_2, hide, output):
+
 	# Create a copy with modified commandline
 	f2 = open("cmd2.lnk","w+b")
 	f2.write(file_part_1)
-	
+
 	# Check hide option and calculate cmdline size accordingly
 	if hide == True:
 		lenght = len(cmdline_string + hide_string)
 	else:
 		lenght = len(cmdline_string)
-		
+
 	byte_array = number_to_bytes(lenght)
-	
+
 	# Write cmdline argument size in beginning of cmdline section
 	if int(lenght) > int(0xff):
+		if int(lenght) > int(0xffff):
+			output += " [!] Error: Cmdline bigger than 0xFFFF, unable to write\n"
+			sys.exit(1)
+
 		f2.write(bytes([c for t in zip(byte_array[1::2], byte_array[::2]) for c in t]))
-		
+
 		if hide == True:
 			for i in hide_string:
 				f2.write(bytes(i, 'utf8'))
 				f2.write(bytes("\0", 'utf8'))
-		
+
 		#write commandline argument with null bytes
 		for i in cmdline_string:
 			f2.write(bytes(i, 'utf8'))
 			f2.write(bytes("\0", 'utf8'))
-		
+
 		#add terminating null
 		f2.write(bytes("\0\0", 'utf8'))
 	else:
@@ -133,15 +137,15 @@ def write_custom_commandline(file_part_1, file_part_2, hide):
 			for i in hide_string:
 				f2.write(bytes("\0", 'utf8'))
 				f2.write(bytes(i, 'utf8'))
-		
+
 		#write commandline argument with null bytes
 		for i in cmdline_string:
 			f2.write(bytes("\0", 'utf8'))
 			f2.write(bytes(i, 'utf8'))
-		
+
 		#add terminating null
 		f2.write(bytes("\0\0\0", 'utf8'))
-	
+
 	# Complete with the saved second part.
 	f2.write(file_part_2)
 
@@ -239,7 +243,7 @@ def parse_lnk(filename, editcommandline):
 	# get the flag bits´
 	flags = read_unpack_bin(f,20,1)
 	flag_desc = list()
-	
+
 	for cnt in range(len(flags)-1):
 		bit = int(flags[cnt])
 		# grab the description for this bit
@@ -282,7 +286,7 @@ def parse_lnk(filename, editcommandline):
 	icon_index = int(icon_index_hex, 16)
 	output += "Icon Index: "+str(icon_index) + "\n"
 
-	# show windows starts @3Ch = 60d 
+	# show windows starts @3Ch = 60d
 	show_wnd_hex = reverse_hex(read_unpack(f,60,1))
 	show_wnd = int(show_wnd_hex, 16)
 	output += "ShowWnd: "+str(show_wnd_hash[show_wnd]) + "\n"
@@ -326,21 +330,21 @@ def parse_lnk(filename, editcommandline):
 	# Random garbage if bit0 is clear in volume flags
 
 	if vol_flags[:2] == "10":
-	
+
 		output += "Target is on local volume\n"
 
-		# This is the offset of the local volume table within the 
+		# This is the offset of the local volume table within the
 		# File Info Location Structure
 		loc_vol_tab_off_hex = reverse_hex(read_unpack(f,local_vol_off,4))
 		loc_vol_tab_off = int(loc_vol_tab_off_hex, 16)
 
 		# This is the asolute start location of the local volume table
 		loc_vol_tab_start = loc_vol_tab_off + struct_start
-		
+
 		# This is the length of the local volume table
 		local_vol_len_hex = reverse_hex(read_unpack(f,loc_vol_tab_off+struct_start,4))
 		local_vol_len = int(local_vol_len_hex, 16)
-		
+
 		# We now have enough info to
 		# Calculate the end of the local volume table.
 		local_vol_tab_end = loc_vol_tab_start + local_vol_len
@@ -356,7 +360,7 @@ def parse_lnk(filename, editcommandline):
 		vol_serial = reverse_hex(read_unpack(f,curr_tab_offset,4))
 		output += "Volume Serial: "+vol_serial + "\n"
 
-		# Get the location, and length of the volume label 
+		# Get the location, and length of the volume label
 		vol_label_loc = loc_vol_tab_off + struct_start + 16
 		vol_label_len = local_vol_tab_end - vol_label_loc
 		vol_label = read_unpack_ascii(f,vol_label_loc,vol_label_len);
@@ -366,11 +370,11 @@ def parse_lnk(filename, editcommandline):
 		# This is the offset of the base path info within the
 		# File Info structure
 		#------------------------------------------------------------------------
-		
+
 		base_path_off_hex = reverse_hex(read_unpack(f,base_path_off,4))
 		base_path_off = struct_start + int(base_path_off_hex, 16)
 
-		# Read base path data upto NULL term 
+		# Read base path data upto NULL term
 		base_path = read_null_term(f,base_path_off)
 		output += "Target executable path: "+base_path + "\n"
 
@@ -438,25 +442,25 @@ def parse_lnk(filename, editcommandline):
 		 addnl_text,next_loc = add_info(f,next_loc)
 		 output += "Working Dir: "+addnl_text.decode('utf-8') + "\n"
 
-	if flags[5]=="1":	
-		
+	if flags[5]=="1":
+
 		# Edit or just add info
 		if editcommandline == True:
 			# Save beginning of file before commandline section
 			f.seek(0)
-			file_part_1 = f.read(next_loc)	
+			file_part_1 = f.read(next_loc)
 			addnl_text,next_loc = add_info(f,next_loc)
 			output += "Command Line: "+str(addnl_text.decode('utf-16le', errors='ignore')) + "\n"
-		
+
 			# Save rest of the file after commandline section
 			f.seek(next_loc)
-			file_part_2 = f.read()		
+			file_part_2 = f.read()
 			hide = True
-			write_custom_commandline(file_part_1, file_part_2, hide)
+			write_custom_commandline(file_part_1, file_part_2, hide, output)
 		else:
 			addnl_text,next_loc = add_info(f,next_loc)
 			output += "Command Line: "+str(addnl_text.decode('utf-16le', errors='ignore').lstrip(" ")) + "\n"
-			
+
 	if flags[6]=="1":
 		 addnl_text,next_loc = add_info(f,next_loc)
 		 output += "Icon filename: "+str(addnl_text.decode('utf-16le', errors='ignore')) + "\n"
@@ -465,11 +469,11 @@ def parse_lnk(filename, editcommandline):
 
 if __name__ == "__main__":
 
-	# parse .lnk file	
+	# parse .lnk file
 	infile = sys.argv[1]
-	editcommandline = True
+	editcommandline = False
 	out = parse_lnk(infile, editcommandline)
-	
+
 	#parser = argparse.ArgumentParser(description='Parse and modify Microsoft .LNK files')
 	#parser.add_argument('LNK_File', metavar='File', type=str, nargs='+', help='Filename for .lnk file')
 	#parser.add_argument('--edit', dest='editmode', action='store_const', const=sum, default="", help='Edit the .LNK file commandline arguments')
@@ -477,5 +481,5 @@ if __name__ == "__main__":
 
 	#args = parser.parse_args()
 	#print(args)
-	
+
 	print("out: ",out)
