@@ -5,3 +5,5 @@ Missing argparser for now, to use the tool set editcommandline = False to not ma
 set hide = False if you dont want to hide the commandline from plainview.
 
 The tool takes in one argument which is the .lnk file to be parsed/modified, if editcommandline = True, new .lnk file will be created with edited commandline: cmd2.lnk
+
+This tool is based on pylinker.py found at: https://github.com/HarmJ0y/pylnker/blob/master/pylnker.py
