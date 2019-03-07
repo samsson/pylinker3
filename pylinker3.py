@@ -97,51 +97,51 @@ vol_type_hash[6] = "RAM Drive"
 
 def write_custom_commandline(file_part_1, file_part_2, hide):
 		
-		# Create a copy with modified commandline
-		f2 = open("cmd2.lnk","w+b")
-		f2.write(file_part_1)
+	# Create a copy with modified commandline
+	f2 = open("cmd2.lnk","w+b")
+	f2.write(file_part_1)
+	
+	# Check hide option and calculate cmdline size accordingly
+	if hide == True:
+		lenght = len(cmdline_string + hide_string)
+	else:
+		lenght = len(cmdline_string)
 		
-		# Check hide option and calculate cmdline size accordingly
+	byte_array = number_to_bytes(lenght)
+	
+	# Write cmdline argument size in beginning of cmdline section
+	if int(lenght) > int(0xff):
+		f2.write(bytes([c for t in zip(byte_array[1::2], byte_array[::2]) for c in t]))
+		
 		if hide == True:
-			lenght = len(cmdline_string + hide_string)
-		else:
-			lenght = len(cmdline_string)
-			
-		byte_array = number_to_bytes(lenght)
-		
-		# Write cmdline argument size in beginning of cmdline section
-		if int(lenght) > int(0xff):
-			f2.write(bytes([c for t in zip(byte_array[1::2], byte_array[::2]) for c in t]))
-			
-			if hide == True:
-				for i in hide_string:
-					f2.write(bytes(i, 'utf8'))
-					f2.write(bytes("\0", 'utf8'))
-			
-			#write commandline argument with null bytes
-			for i in cmdline_string:
+			for i in hide_string:
 				f2.write(bytes(i, 'utf8'))
 				f2.write(bytes("\0", 'utf8'))
-			
-			#add terminating null
-			f2.write(bytes("\0\0", 'utf8'))
-		else:
-			f2.write(byte_array)
-			if hide == True:
-				for i in hide_string:
-					f2.write(bytes("\0", 'utf8'))
-					f2.write(bytes(i, 'utf8'))
-			
-			#write commandline argument with null bytes
-			for i in cmdline_string:
+		
+		#write commandline argument with null bytes
+		for i in cmdline_string:
+			f2.write(bytes(i, 'utf8'))
+			f2.write(bytes("\0", 'utf8'))
+		
+		#add terminating null
+		f2.write(bytes("\0\0", 'utf8'))
+	else:
+		f2.write(byte_array)
+		if hide == True:
+			for i in hide_string:
 				f2.write(bytes("\0", 'utf8'))
 				f2.write(bytes(i, 'utf8'))
-			
-			#add terminating null
-			f2.write(bytes("\0\0\0", 'utf8'))
 		
-		# Complete with the saved second part.
-		f2.write(file_part_2)
+		#write commandline argument with null bytes
+		for i in cmdline_string:
+			f2.write(bytes("\0", 'utf8'))
+			f2.write(bytes(i, 'utf8'))
+		
+		#add terminating null
+		f2.write(bytes("\0\0\0", 'utf8'))
+	
+	# Complete with the saved second part.
+	f2.write(file_part_2)
 
 def number_to_bytes(number):
 	nibble_count = int(math.log(number, 256)) + 1
