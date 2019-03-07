@@ -1,6 +1,8 @@
 
 #!/usr/bin/python
-# This is an enchanced version of pylinker.py found at: https://github.com/HarmJ0y/pylnker/blob/master/pylnker.py
+# This is an enchanced version of pylinker.py found at:
+# https://github.com/HarmJ0y/pylnker/blob/master/pylnker.py
+#
 # Which itself is a port of original from:
 #   https://code.google.com/p/revealertoolkit/source/browse/trunk/tools/lnk-parse-1.0.pl
 #   Windows LNK file parser - Jacob Cunningham - jakec76@users.sourceforge.net
