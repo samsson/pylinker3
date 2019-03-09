@@ -9,13 +9,14 @@ usage:
 ```
 python3 pylinker3.py [-h] -f file [-c cmdline] [--hide [HIDE]]
 ```
+
 -h, --help                show this help message and exit
 -f file, --file file      Input .lnk file to parse or modify
 -c cmdline, --cmdline     optional: Set a new cmdline for the .lnk file
 --hide [HIDE]             optional: Will hide the commandline from plain view if observed from explorer
 -o output, --output       optional: Define output file. Default is inputfilename[0-9].lnk
 
-!!To modify a .lnk commandline arguments, any commanline argument must exist in the original .lnk file!!
+Modifying commandline will create a new copy of the file with modified commandline
 
 example usage:
 ```

@@ -160,7 +160,7 @@ def hotkeytranslate(hotkey_hex):
 	HighByte = hotkey_hash[int(hotkey_hex[:2], 16)]
 	return HighByte + LowByte
 
-def write_custom_commandline(file_part_1, file_part_2, output):
+def write_custom_commandline(file_part_1, file_part_2, output, new_bytes):
 
 	# Create a copy with modified commandline
 	filename = args.file.split(".")
@@ -225,6 +225,11 @@ def write_custom_commandline(file_part_1, file_part_2, output):
 
 	# Complete with the saved second part.
 	f2.write(file_part_2)
+
+	if new_bytes != "":
+		f2.seek(20)
+		f2.write(bytes.fromhex(new_bytes))
+		#f2.write(bytes(new_bytes, 'utf8'))
 
 def number_to_bytes(number):
 	nibble_count = int(math.log(number, 256)) + 1
@@ -310,6 +315,7 @@ def add_info(f,loc):
 
 def parse_lnk(filename):
 
+	new_bytes = ""
 	#read the file in binary module
 	try:
 		f = open(filename, "r+b")
@@ -323,7 +329,7 @@ def parse_lnk(filename):
 
 	output = "\nLnk File: " + filename + "\n"
 	# get the flag bits´
-	flags = read_unpack_bin(f,20,1)
+	flags = read_unpack_bin(f,20,4)
 	flag_desc = list()
 
 	for cnt in range(len(flags)-1):
@@ -344,7 +350,7 @@ def parse_lnk(filename):
 	if len(attrib_desc) > 0:
 		output += "File Attributes: " + " | ".join(attrib_desc) + "\n"
 
-	output += "Target executable timestamps: \n"
+	output += "\nTarget executable timestamps: \n"
 	# Create time 8bytes @ 1ch = 28
 
 	create_time = reverse_hex(read_unpack(f,28,8))
@@ -413,7 +419,7 @@ def parse_lnk(filename):
 
 	if vol_flags[:2] == "10":
 
-		output += "Target is on local volume\n"
+		output += "\nTarget is on local volume\n"
 
 		# This is the offset of the local volume table within the
 		# File Info Location Structure
@@ -435,18 +441,21 @@ def parse_lnk(filename):
 		curr_tab_offset = loc_vol_tab_off + struct_start + 4
 		vol_type_hex = reverse_hex(read_unpack(f,curr_tab_offset,4))
 		vol_type = int(vol_type_hex, 16)
-		output += "Volume Type: "+str(vol_type_hash[vol_type]) + "\n"
+		output += "\tVolume Type: "+str(vol_type_hash[vol_type]) + "\n"
 
 		# Volume Serial Number
 		curr_tab_offset = loc_vol_tab_off + struct_start + 8
 		vol_serial = reverse_hex(read_unpack(f,curr_tab_offset,4))
-		output += "Volume Serial: "+vol_serial + "\n"
+		output += "\tVolume Serial: "+vol_serial + "\n"
 
 		# Get the location, and length of the volume label
 		vol_label_loc = loc_vol_tab_off + struct_start + 16
 		vol_label_len = local_vol_tab_end - vol_label_loc
-		vol_label = read_unpack_ascii(f,vol_label_loc,vol_label_len);
-		output += "Vol Label: "+vol_label.decode("utf-8") + "\n"
+		vol_label = read_unpack_ascii(f,vol_label_loc,vol_label_len)
+		if vol_label == b'\x00':
+			output += "\tVol Label: No Volume Label\n"
+		else:
+			output += "\tVol Label: "+vol_label.decode("utf-8") + "\n"
 
 		#------------------------------------------------------------------------
 		# This is the offset of the base path info within the
@@ -458,7 +467,7 @@ def parse_lnk(filename):
 
 		# Read base path data upto NULL term
 		base_path = read_null_term(f,base_path_off)
-		output += "Target executable path: "+base_path + "\n"
+		output += "\tTarget executable path: "+base_path + "\n\n"
 
 	# Network Volume Table
 
@@ -482,7 +491,7 @@ def parse_lnk(filename):
 
 		net_share_name_loc = net_vol_off + net_share_name_loc
 		net_share_name = read_null_term(f,net_share_name_loc)
-		output += "Network Share Name: "+str(net_share_name) + "\n"
+		output += "\tNetwork Share Name: "+str(net_share_name) + "\n"
 
 		# Mapped Network Drive Info
 		net_share_mdrive = net_vol_off + 12
@@ -492,7 +501,7 @@ def parse_lnk(filename):
 		if(net_share_mdrive != 0):
 			net_share_mdrive = net_vol_off + net_share_mdrive
 			net_share_mdrive = read_null_term(f,net_share_mdrive)
-			output += "Mapped Drive: "+str(net_share_mdrive) + "\n"
+			output += "\tMapped Drive: "+str(net_share_mdrive) + "\n"
 
 	else:
 		output += " [!] Error: unknown volume flags\n"
@@ -522,11 +531,20 @@ def parse_lnk(filename):
 
 	if flags[4]=="1":
 		 addnl_text,next_loc = add_info(f,next_loc)
-		 output += "Working Dir: "+addnl_text.decode('utf-8') + "\n"
+		 output += "Working Dir: "+addnl_text.decode('utf-16le', errors='ignore') + "\n"
+
+	# Check if there is willingness to modify commandline but no commandline is present.
+	if flags[5]=="0" and editcommandline == True:
+
+		#
+		flags_new = flags[:8][:5] + "1" + flags[:8][-2:]
+		new_bytes = hex(int(flags_new[::-1], 2)).lstrip("0x")
+		flags = flags_new + flags[8:]
+		#sys.exit()
 
 	if flags[5]=="1":
 
-		# Edit or just add info
+		# Check if commandline needs editing
 		if editcommandline == True:
 			# Save beginning of file before commandline section
 			f.seek(0)
@@ -537,7 +555,9 @@ def parse_lnk(filename):
 			# Save rest of the file after commandline section
 			f.seek(next_loc)
 			file_part_2 = f.read()
-			write_custom_commandline(file_part_1, file_part_2, output)
+			write_custom_commandline(file_part_1, file_part_2, output, new_bytes)
+
+		# Else just add info
 		else:
 			addnl_text,next_loc = add_info(f,next_loc)
 			output += "Command Line: "+str(addnl_text.decode('utf-16le', errors='ignore').lstrip(" ")) + "\n"
@@ -563,7 +583,9 @@ if __name__ == "__main__":
 
 		editcommandline = True
 		cmdline_string = args.cmdline
+		out = parse_lnk(args.file)
+		print("File modified! ")
 
-	#parse .lnk file
-	out = parse_lnk(args.file)
-	print("out: ",out)
+	else:
+		out = parse_lnk(args.file)
+		print("out: ",out)
