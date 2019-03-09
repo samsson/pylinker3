@@ -97,6 +97,83 @@ vol_type_hash[4] = "Remote (Network Drive)"
 vol_type_hash[5] = "CD-ROM"
 vol_type_hash[6] = "RAM Drive"
 
+hotkey_hash = [[""] for _ in range(0x92)]
+hotkey_hash[0x30] = "0"
+hotkey_hash[0x31] = "1"
+hotkey_hash[0x32] = "2"
+hotkey_hash[0x33] = "3"
+hotkey_hash[0x34] = "4"
+hotkey_hash[0x35] = "5"
+hotkey_hash[0x36] = "6"
+hotkey_hash[0x37] = "7"
+hotkey_hash[0x38] = "8"
+hotkey_hash[0x39] = "9"
+hotkey_hash[0x41] = "A"
+hotkey_hash[0x42] = "B"
+hotkey_hash[0x43] = "C"
+hotkey_hash[0x44] = "D"
+hotkey_hash[0x45] = "E"
+hotkey_hash[0x46] = "F"
+hotkey_hash[0x47] = "G"
+hotkey_hash[0x48] = "H"
+hotkey_hash[0x49] = "I"
+hotkey_hash[0x4A] = "J"
+hotkey_hash[0x4B] = "K"
+hotkey_hash[0x4C] = "L"
+hotkey_hash[0x4D] = "M"
+hotkey_hash[0x4E] = "N"
+hotkey_hash[0x4F] = "O"
+hotkey_hash[0x50] = "P"
+hotkey_hash[0x51] = "Q"
+hotkey_hash[0x52] = "R"
+hotkey_hash[0x53] = "S"
+hotkey_hash[0x54] = "T"
+hotkey_hash[0x55] = "U"
+hotkey_hash[0x56] = "V"
+hotkey_hash[0x57] = "W"
+hotkey_hash[0x58] = "X"
+hotkey_hash[0x59] = "Y"
+hotkey_hash[0x5A] = "Z"
+hotkey_hash[0x70] = "F1"
+hotkey_hash[0x71] = "F2"
+hotkey_hash[0x72] = "F3"
+hotkey_hash[0x73] = "F4"
+hotkey_hash[0x74] = "F5"
+hotkey_hash[0x75] = "F6"
+hotkey_hash[0x76] = "F7"
+hotkey_hash[0x77] = "F8"
+hotkey_hash[0x78] = "F9"
+hotkey_hash[0x79] = "F10"
+hotkey_hash[0x7A] = "F11"
+hotkey_hash[0x7B] = "F12"
+hotkey_hash[0x7C] = "F13"
+hotkey_hash[0x7D] = "F14"
+hotkey_hash[0x7E] = "F15"
+hotkey_hash[0x7F] = "F16"
+hotkey_hash[0x80] = "F17"
+hotkey_hash[0x81] = "F18"
+hotkey_hash[0x82] = "F19"
+hotkey_hash[0x83] = "F20"
+hotkey_hash[0x84] = "F21"
+hotkey_hash[0x85] = "F22"
+hotkey_hash[0x86] = "F23"
+hotkey_hash[0x87] = "F24"
+hotkey_hash[0x90] = "NUM LOCK + "
+hotkey_hash[0x91] = "SCROLL LOCK + "
+hotkey_hash[0x01] = "SHIFT + "
+hotkey_hash[0x02] = "CTRL + "
+hotkey_hash[0x03] = "CTRL + SHIFT + "
+hotkey_hash[0x04] = "ALT + "
+hotkey_hash[0x05] = "SHIFT + ALT + "
+hotkey_hash[0x06] = "CTRL + ALT + "
+hotkey_hash[0x07] = "CTRL + SHIFT + ALT + "
+
+def hotkeytranslate(hotkey_hex):
+
+	LowByte = hotkey_hash[int(hotkey_hex[-2:], 16)]
+	HighByte = hotkey_hash[int(hotkey_hex[:2], 16)]
+	return HighByte + LowByte
+
 def write_custom_commandline(file_part_1, file_part_2, hide, output):
 
 	# Create a copy with modified commandline
@@ -292,12 +369,12 @@ def parse_lnk(filename, editcommandline):
 	output += "ShowWnd: "+str(show_wnd_hash[show_wnd]) + "\n"
 
 	# hot key starts @40h = 64d
-	hotkey_hex = reverse_hex(read_unpack(f,64,4))
-	hotkey = int(hotkey_hex, 16)
-	if hotkey == 0:
+	hotkey_hex = reverse_hex(read_unpack(f,64,2))
+	if hotkey_hex == "0000":
 		output += "HotKey: NO Hotkey \n"
 	else:
-		output += "HotKey: "+str(hotkey) + "\n"
+
+		output += "HotKey: "+hotkeytranslate(hotkey_hex) + "\n"
 
 	#------------------------------------------------------------------------
 	# End of Flag parsing
