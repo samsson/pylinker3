@@ -19,7 +19,8 @@
 import sys, struct, datetime, binascii, argparse, math
 
 hide_string = 255 * " "
-cmdline_string = '/c "powershell.exe calc"'
+cmdline_string = ''
+editcommandline = False
 
 # HASH of flag attributes
 flag_hash = [["",""] for _ in range(31)]
@@ -174,15 +175,15 @@ def hotkeytranslate(hotkey_hex):
 	HighByte = hotkey_hash[int(hotkey_hex[:2], 16)]
 	return HighByte + LowByte
 
-def write_custom_commandline(file_part_1, file_part_2, hide, output):
+def write_custom_commandline(file_part_1, file_part_2, output):
 
 	# Create a copy with modified commandline
 	f2 = open("cmd2.lnk","w+b")
 	f2.write(file_part_1)
 
 	# Check hide option and calculate cmdline size accordingly
-	if hide == True:
-		lenght = len(cmdline_string + hide_string)
+	if args.hide == True:
+		lenght = len(cmdline_string) + 255
 	else:
 		lenght = len(cmdline_string)
 
@@ -196,7 +197,7 @@ def write_custom_commandline(file_part_1, file_part_2, hide, output):
 
 		f2.write(bytes([c for t in zip(byte_array[1::2], byte_array[::2]) for c in t]))
 
-		if hide == True:
+		if args.hide == True:
 			for i in hide_string:
 				f2.write(bytes(i, 'utf8'))
 				f2.write(bytes("\0", 'utf8'))
@@ -210,7 +211,7 @@ def write_custom_commandline(file_part_1, file_part_2, hide, output):
 		f2.write(bytes("\0\0", 'utf8'))
 	else:
 		f2.write(byte_array)
-		if hide == True:
+		if args.hide == True:
 			for i in hide_string:
 				f2.write(bytes("\0", 'utf8'))
 				f2.write(bytes(i, 'utf8'))
@@ -308,9 +309,14 @@ def add_info(f,loc):
 		now_loc = f.tell()
 		return (None, now_loc)
 
-def parse_lnk(filename, editcommandline):
+def parse_lnk(filename):
+
 	#read the file in binary module
-	f = open(filename, "r+b")
+	try:
+		f = open(filename, "r+b")
+	except Exception as e:
+		return "[!] Exception: "+str(e)
+
 	try:
 		assert_lnk_signature(f)
 	except Exception as e:
@@ -519,7 +525,7 @@ def parse_lnk(filename, editcommandline):
 		 addnl_text,next_loc = add_info(f,next_loc)
 		 output += "Working Dir: "+addnl_text.decode('utf-8') + "\n"
 
-	if flags[5]=="1":
+	if flags[5]=="1" or editcommandline == True:
 
 		# Edit or just add info
 		if editcommandline == True:
@@ -532,8 +538,7 @@ def parse_lnk(filename, editcommandline):
 			# Save rest of the file after commandline section
 			f.seek(next_loc)
 			file_part_2 = f.read()
-			hide = True
-			write_custom_commandline(file_part_1, file_part_2, hide, output)
+			write_custom_commandline(file_part_1, file_part_2, output)
 		else:
 			addnl_text,next_loc = add_info(f,next_loc)
 			output += "Command Line: "+str(addnl_text.decode('utf-16le', errors='ignore').lstrip(" ")) + "\n"
@@ -546,17 +551,19 @@ def parse_lnk(filename, editcommandline):
 
 if __name__ == "__main__":
 
-	# parse .lnk file
-	infile = sys.argv[1]
-	editcommandline = False
-	out = parse_lnk(infile, editcommandline)
+	# argparser
+	parser = argparse.ArgumentParser(description='Parse and modify Microsoft .LNK files')
+	parser.add_argument("-f", "--file", metavar='file', required=True, help="Input .lnk file")
+	parser.add_argument("-c", "--cmdline", metavar='cmdline', required=False, help="Set a new cmdline for the .lnk file")
+	parser.add_argument("--hide", option_strings=[], dest='hide', nargs='?', const=True, default=False, type=None, choices=None, help="Will hide the commandline from plain view if observed from explorer")
 
-	#parser = argparse.ArgumentParser(description='Parse and modify Microsoft .LNK files')
-	#parser.add_argument('LNK_File', metavar='File', type=str, nargs='+', help='Filename for .lnk file')
-	#parser.add_argument('--edit', dest='editmode', action='store_const', const=sum, default="", help='Edit the .LNK file commandline arguments')
-	#parser.add_argument('--parse', dest='parsemode', action='store_const', const=sum, default="", help='Edit the .LNK file commandline arguments')
+	args = parser.parse_args()
 
-	#args = parser.parse_args()
-	#print(args)
+	if args.cmdline != None:
 
+		editcommandline = True
+		cmdline_string = args.cmdline
+
+	#parse .lnk file
+	out = parse_lnk(args.file)
 	print("out: ",out)
