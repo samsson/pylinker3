@@ -1,22 +1,7 @@
 
 #!/usr/bin/python
-# This is an enchanced version of pylinker.py found at:
-# https://github.com/HarmJ0y/pylnker/blob/master/pylnker.py
-#
-# Which itself is a port of original from:
-#   https://code.google.com/p/revealertoolkit/source/browse/trunk/tools/lnk-parse-1.0.pl
-#   Windows LNK file parser - Jacob Cunningham - jakec76@users.sourceforge.net
-#   Based on the contents of the document:
-#   http://www.i2s-lab.com/Papers/The_Windows_Shortcut_File_Format.pdf
-#   v1.0
-#
-#  Edits by @samiruohonen
-#	- Added full flag list from: https://docs.microsoft.com/en-us/openspecs/windows_protocols/ms-shllink/16cb4ca1-9339-4d0c-a68d-bf1d6cc0f943
-#	- Added functionality to write custom commandline arguments with hide option
-#	- Beautified output
-#	- Ported to python 3
 
-import sys, struct, datetime, binascii, argparse, math
+import sys, struct, datetime, binascii, argparse, math, os
 
 hide_string = 255 * " "
 cmdline_string = ''
@@ -178,7 +163,21 @@ def hotkeytranslate(hotkey_hex):
 def write_custom_commandline(file_part_1, file_part_2, output):
 
 	# Create a copy with modified commandline
-	f2 = open("cmd2.lnk","w+b")
+	filename = args.file.split(".")
+	#newfilename = ""
+	if args.output == False:
+		for i in range(10):
+			newfilename = filename[0] + str(i) + ".lnk"
+			if not os.path.isfile(newfilename):
+				break
+			if i == 9:
+				output += " [!] Error: Unable to create copy file\n"
+				sys.exit(1)
+
+		f2 = open(newfilename,"w+b")
+	else:
+		f2 = open(args.output,"w+b")
+
 	f2.write(file_part_1)
 
 	# Check hide option and calculate cmdline size accordingly
@@ -525,7 +524,7 @@ def parse_lnk(filename):
 		 addnl_text,next_loc = add_info(f,next_loc)
 		 output += "Working Dir: "+addnl_text.decode('utf-8') + "\n"
 
-	if flags[5]=="1" or editcommandline == True:
+	if flags[5]=="1":
 
 		# Edit or just add info
 		if editcommandline == True:
@@ -556,6 +555,7 @@ if __name__ == "__main__":
 	parser.add_argument("-f", "--file", metavar='file', required=True, help="Input .lnk file")
 	parser.add_argument("-c", "--cmdline", metavar='cmdline', required=False, help="Set a new cmdline for the .lnk file")
 	parser.add_argument("--hide", option_strings=[], dest='hide', nargs='?', const=True, default=False, type=None, choices=None, help="Will hide the commandline from plain view if observed from explorer")
+	parser.add_argument("-o", "--output", metavar='output', required=False, default=False, help="Define output file. Default is inputfilename[0-9].lnk")
 
 	args = parser.parse_args()
 
