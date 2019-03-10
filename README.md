@@ -28,6 +28,13 @@ example usage:
 py pylinker3.py --file cmd.lnk -c '/c "powershell.exe calc"' --hide -o powershellcalc.lnk
 ```
 
+To call pylinker3 from other file, this returns the results in a list.
+
+```
+import pylinker3
+print(pylinker3.parse("cmd.lnk"))
+```
+
 ### Prerequisites
 
 You need python 3, tested on windows Python 3.7.2
